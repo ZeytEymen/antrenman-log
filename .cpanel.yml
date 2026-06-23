@@ -2,7 +2,7 @@
 deployment:
   tasks:
     # Uygulamanın yayınlanacağı klasör (site adresi: domain.com/tracker/)
-    - export DEPLOYPATH=$HOME/public_html/tracker
+    - export DEPLOYPATH=/home/zeyteyme/public_html/tracker
     - /bin/mkdir -p "$DEPLOYPATH"
     # antrenman-log/ içeriğini (gizli .htaccess dosyaları dahil) yayın klasörüne kopyala.
     # config.php git'te olmadığı için kopyalanmaz; sunucudaki mevcut config.php korunur.
