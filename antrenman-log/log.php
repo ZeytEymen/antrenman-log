@@ -33,6 +33,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $n = $pdo->prepare('UPDATE workouts SET notes=? WHERE id=? AND user_id=?');
         $n->execute([trim($_POST['notes'] ?? '') ?: null, $wid, $me['id']]);
         flash('Not kaydedildi.');
+    } elseif ($act === 'addphoto') {
+        $res = save_upload($_FILES['photo'] ?? []);
+        if ($res['ok']) {
+            $cap = trim($_POST['caption'] ?? '') ?: null;
+            $ins = $pdo->prepare('INSERT INTO workout_photos (workout_id,file_name,caption) VALUES (?,?,?)');
+            $ins->execute([$wid, $res['file'], $cap]);
+            flash('Fotoğraf eklendi.');
+        } else {
+            flash('Hata: ' . $res['error']);
+        }
+        redirect('log.php?id=' . $wid . '#fotograflar');
+    } elseif ($act === 'delphoto') {
+        $pid = (int)$_POST['photo_id'];
+        $q = $pdo->prepare('SELECT file_name FROM workout_photos WHERE id=? AND workout_id=?');
+        $q->execute([$pid, $wid]);
+        $f = $q->fetch();
+        if ($f) {
+            $pdo->prepare('DELETE FROM workout_photos WHERE id=? AND workout_id=?')->execute([$pid, $wid]);
+            delete_upload($f['file_name']);
+        }
+        redirect('log.php?id=' . $wid . '#fotograflar');
     }
     redirect('log.php?id=' . $wid . (isset($_POST['exercise_id']) ? '#ex'.(int)$_POST['exercise_id'] : ''));
 }
@@ -48,6 +69,11 @@ $ss->execute([$wid]);
 $sets = $ss->fetchAll();
 $grouped = [];
 foreach ($sets as $s) { $grouped[$s['exercise_id']][] = $s; }
+
+// Bu antrenmanın fotoğrafları (form analiz)
+$ph = $pdo->prepare('SELECT * FROM workout_photos WHERE workout_id=? ORDER BY id');
+$ph->execute([$wid]);
+$photos = $ph->fetchAll();
 
 // "Geçen sefer" referansı — bu antrenmandaki her hareket için bir önceki seans
 function last_time(PDO $pdo, int $uid, int $exId, int $curWid, string $curDate): ?array {
@@ -142,6 +168,49 @@ require __DIR__ . '/header.php';
     </table>
   </div>
 <?php endforeach; endif; ?>
+
+<div class="card" id="fotograflar">
+  <h2>Form fotoğrafları</h2>
+  <?php if ($photos): ?>
+    <div class="photos">
+      <?php foreach ($photos as $p): ?>
+        <figure class="photo">
+          <a href="photo.php?id=<?= (int)$p['id'] ?>" target="_blank" rel="noopener">
+            <img src="photo.php?id=<?= (int)$p['id'] ?>" loading="lazy" alt="<?= h($p['caption'] ?? 'form fotoğrafı') ?>">
+          </a>
+          <figcaption>
+            <span><?= $p['caption'] ? h($p['caption']) : '<span class="muted">notsuz</span>' ?></span>
+            <form method="post" onsubmit="return confirm('Fotoğraf silinsin mi?')" style="display:inline">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="delphoto">
+              <input type="hidden" name="photo_id" value="<?= (int)$p['id'] ?>">
+              <button class="btn sm danger">×</button>
+            </form>
+          </figcaption>
+        </figure>
+      <?php endforeach; ?>
+    </div>
+  <?php else: ?>
+    <p class="muted" style="margin:0 0 14px">Bu antrenmana henüz fotoğraf eklenmedi.</p>
+  <?php endif; ?>
+
+  <form method="post" enctype="multipart/form-data" style="margin-top:6px">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="addphoto">
+    <div class="row">
+      <div><label>Fotoğraf</label><input type="file" name="photo" accept="image/*" required></div>
+      <div><label>Poz / not (ops.)</label>
+        <input name="caption" list="pozlar" placeholder="önden duruş" maxlength="120">
+        <datalist id="pozlar">
+          <option value="Önden duruş"><option value="Yandan duruş"><option value="Arkadan duruş">
+          <option value="Ön biceps"><option value="Yan omuz"><option value="Sırt (arka çift biceps)">
+        </datalist>
+      </div>
+    </div>
+    <button class="btn ghost sm" style="margin-top:12px">Fotoğraf ekle</button>
+    <p class="muted" style="font-size:12px;margin-top:8px">En fazla 12 MB · JPG / PNG / WEBP. Sadece sen görebilirsin.</p>
+  </form>
+</div>
 
 <div class="card">
   <h2>Antrenman notu</h2>

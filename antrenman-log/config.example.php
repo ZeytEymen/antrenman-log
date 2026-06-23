@@ -92,3 +92,50 @@ function take_flash(): ?string {
     unset($_SESSION['flash']);
     return $m;
 }
+
+// ---------- Fotoğraf yükleme (form analiz) ----------
+const UPLOAD_DIR     = __DIR__ . '/uploads';
+const MAX_UPLOAD     = 12 * 1024 * 1024;  // 12 MB
+// İzin verilen görsel türleri: tarayıcıda gösterilebilenler
+const ALLOWED_IMAGES = [
+    IMAGETYPE_JPEG => 'jpg',
+    IMAGETYPE_PNG  => 'png',
+    IMAGETYPE_WEBP => 'webp',
+    IMAGETYPE_GIF  => 'gif',
+];
+
+// Yüklenen tek bir görseli doğrula + uploads/ içine kaydet.
+// Başarılıysa kayıtlı dosya adını, hatada bir hata mesajını döndürür.
+// Dönüş: ['ok'=>true,'file'=>'...'] | ['ok'=>false,'error'=>'...']
+function save_upload(array $file): array {
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => false, 'error' => 'Dosya seçilmedi.'];
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'error' => 'Yükleme hatası (kod ' . (int)$file['error'] . ').'];
+    }
+    if ($file['size'] > MAX_UPLOAD) {
+        return ['ok' => false, 'error' => 'Dosya çok büyük (en fazla 12 MB).'];
+    }
+    if (!is_uploaded_file($file['tmp_name'])) {
+        return ['ok' => false, 'error' => 'Geçersiz yükleme.'];
+    }
+    $info = @getimagesize($file['tmp_name']);
+    if ($info === false || !isset(ALLOWED_IMAGES[$info[2]])) {
+        return ['ok' => false, 'error' => 'Sadece JPG, PNG, WEBP veya GIF yüklenebilir.'];
+    }
+    $ext  = ALLOWED_IMAGES[$info[2]];
+    $name = bin2hex(random_bytes(16)) . '.' . $ext;
+    if (!is_dir(UPLOAD_DIR)) { @mkdir(UPLOAD_DIR, 0775, true); }
+    if (!move_uploaded_file($file['tmp_name'], UPLOAD_DIR . '/' . $name)) {
+        return ['ok' => false, 'error' => 'Dosya kaydedilemedi (klasör izinlerini kontrol et).'];
+    }
+    return ['ok' => true, 'file' => $name];
+}
+
+// uploads/ içindeki bir dosyayı güvenli şekilde sil (dizin dışına çıkışı engelle).
+function delete_upload(string $fileName): void {
+    $base = basename($fileName);                 // yol kaçışını engelle
+    $path = UPLOAD_DIR . '/' . $base;
+    if ($base !== '' && is_file($path)) { @unlink($path); }
+}

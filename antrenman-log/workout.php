@@ -13,8 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('log.php?id=' . $pdo->lastInsertId());
     }
     if (($_POST['action'] ?? '') === 'del') {
+        $id = (int)$_POST['id'];
+        // Önce bu antrenmanın fotoğraf dosyalarını diskten sil (DB satırları cascade ile gider)
+        $pf = $pdo->prepare('SELECT p.file_name FROM workout_photos p
+            JOIN workouts w ON w.id=p.workout_id
+            WHERE p.workout_id=? AND w.user_id=?');
+        $pf->execute([$id, $me['id']]);
+        foreach ($pf->fetchAll() as $row) { delete_upload($row['file_name']); }
+
         $st = $pdo->prepare('DELETE FROM workouts WHERE id=? AND user_id=?');
-        $st->execute([(int)$_POST['id'], $me['id']]);
+        $st->execute([$id, $me['id']]);
         flash('Antrenman silindi.');
         redirect('workout.php');
     }

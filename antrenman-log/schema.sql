@@ -30,7 +30,7 @@ ON DUPLICATE KEY UPDATE username = username;
 CREATE TABLE IF NOT EXISTS exercises (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   name        VARCHAR(120) NOT NULL,
-  category    ENUM('lower','upper','core','cardio','other') NOT NULL DEFAULT 'other',
+  category    SET('compound','chest','back','shoulder','arm','leg','core','cardio','other') NOT NULL DEFAULT 'other',
   session     ENUM('A','B','both','none') NOT NULL DEFAULT 'none',
   is_optional TINYINT(1) NOT NULL DEFAULT 0,
   notes       VARCHAR(255) DEFAULT NULL,
@@ -65,6 +65,17 @@ CREATE TABLE IF NOT EXISTS workout_sets (
   INDEX (exercise_id)
 ) ENGINE=InnoDB;
 
+-- ---------- Antrenman fotoğrafları (form analiz) ----------
+CREATE TABLE IF NOT EXISTS workout_photos (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  workout_id  INT NOT NULL,
+  file_name   VARCHAR(255) NOT NULL,        -- uploads/ klasöründeki dosya adı
+  caption     VARCHAR(120) DEFAULT NULL,    -- "önden duruş", "yan omuz", vs.
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE,
+  INDEX (workout_id)
+) ENGINE=InnoDB;
+
 -- ---------- Vücut ağırlığı (kilo takibi) ----------
 CREATE TABLE IF NOT EXISTS bodyweight (
   id        INT AUTO_INCREMENT PRIMARY KEY,
@@ -81,30 +92,30 @@ CREATE TABLE IF NOT EXISTS bodyweight (
 -- =====================================================================
 INSERT INTO exercises (name, category, session, is_optional, notes, sort_order) VALUES
 -- Seans A — alt
-('TRX / Goblet Squat',            'lower','A',0,'Kontrollü derinlik, kapalı zincir',10),
-('Hip Hinge / RDL (Smith/DB)',    'lower','A',0,'Hamstring koruyucu — strap',20),
-('Leg Curl',                      'lower','A',0,'Hamstring',30),
-('Glute Bridge / Hip Thrust',     'lower','A',1,'Önerilir, diz dostu',40),
-('Calf Raise',                    'lower','A',1,NULL,50),
+('TRX / Goblet Squat',            'compound,leg','A',0,'Kontrollü derinlik, kapalı zincir',10),
+('Hip Hinge / RDL (Smith/DB)',    'compound,leg','A',0,'Hamstring koruyucu — strap',20),
+('Leg Curl',                      'leg','A',0,'Hamstring',30),
+('Glute Bridge / Hip Thrust',     'leg','A',1,'Önerilir, diz dostu',40),
+('Calf Raise',                    'leg','A',1,NULL,50),
 -- Seans A — üst
-('Chest Press / Incline DB Press','upper','A',0,NULL,60),
-('Wide-grip Lat Pulldown',        'upper','A',0,'STRAP',70),
-('Seated Cable Row (nötr)',       'upper','A',0,'STRAP',80),
-('Reverse Fly / Rear Delt',       'upper','A',0,'Postür',90),
-('Cable Push Down',               'upper','A',1,NULL,100),
-('Hammer / EZ Curl (hafif)',      'upper','A',1,'Ön kola dikkat',110),
-('Pallof / Cable Core Rotation',  'core', 'A',0,'Anti-rotasyon',120),
+('Chest Press / Incline DB Press','compound,chest','A',0,NULL,60),
+('Wide-grip Lat Pulldown',        'compound,back','A',0,'STRAP',70),
+('Seated Cable Row (nötr)',       'compound,back','A',0,'STRAP',80),
+('Reverse Fly / Rear Delt',       'shoulder','A',0,'Postür',90),
+('Cable Push Down',               'arm','A',1,NULL,100),
+('Hammer / EZ Curl (hafif)',      'arm','A',1,'Ön kola dikkat',110),
+('Pallof / Cable Core Rotation',  'core','A',0,'Anti-rotasyon',120),
 -- Seans B — alt
-('Leg Press (derin değil)',       'lower','B',0,'Kapalı zincir',10),
-('Romanian / Hip Hinge',          'lower','B',0,'Hamstring — strap',20),
-('Leg Extension',                 'lower','B',0,'HAFİF, orta açı, kilitleme yok (ACL)',30),
-('Glute Bridge',                  'lower','B',0,NULL,40),
+('Leg Press (derin değil)',       'compound,leg','B',0,'Kapalı zincir',10),
+('Romanian / Hip Hinge',          'compound,leg','B',0,'Hamstring — strap',20),
+('Leg Extension',                 'leg','B',0,'HAFİF, orta açı, kilitleme yok (ACL)',30),
+('Glute Bridge',                  'leg','B',0,NULL,40),
 -- Seans B — üst
-('Machine Shoulder Press',        'upper','B',0,NULL,50),
-('Chest-supported / Bentover Row','upper','B',0,'STRAP',60),
-('Wide-grip Row',                 'upper','B',0,'STRAP',70),
-('Chin Tuck + boyun/postür',      'upper','B',0,'Kifoz',80),
-('Anti-rotation Core (Pallof)',   'core', 'B',0,NULL,90),
+('Machine Shoulder Press',        'compound,shoulder','B',0,NULL,50),
+('Chest-supported / Bentover Row','compound,back','B',0,'STRAP',60),
+('Wide-grip Row',                 'compound,back','B',0,'STRAP',70),
+('Chin Tuck + boyun/postür',      'other','B',0,'Kifoz',80),
+('Anti-rotation Core (Pallof)',   'core','B',0,NULL,90),
 -- Ortak / kardiyo
 ('Treadmill Incline (yürüyüş)',   'cardio','both',0,'Düşük etkili — koşu yok',200),
 ('Bisiklet',                      'cardio','both',0,'Düşük etkili',210),

@@ -1,0 +1,13 @@
+# Bu klasördeki dosyalara tarayıcıdan DOĞRUDAN erişim kapalı.
+# Fotoğraflar yalnızca photo.php üzerinden (giriş + sahiplik kontrolüyle) servis edilir.
+
+# Apache 2.4+
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+
+# Apache 2.2 (eski sunucular)
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

@@ -1,6 +1,10 @@
 # Gerçek veritabanı şifresi burada — git'e ASLA girmesin
 antrenman-log/config.php
 
+# Yüklenen form fotoğrafları — git'e gitmesin ama klasör + .htaccess kalsın
+antrenman-log/uploads/*
+!antrenman-log/uploads/.htaccess
+
 # Claude Code lokal ayarları
 .claude/
 

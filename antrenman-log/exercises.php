@@ -3,17 +3,33 @@ require __DIR__ . '/config.php';
 require_login();
 $me = current_user($pdo);
 
+// Kategori listesi (anahtar = DB değeri, değer = Türkçe etiket). Çoklu seçilebilir.
+$CATS = [
+    'compound' => 'Bileşik',
+    'chest'    => 'Göğüs',
+    'back'     => 'Sırt',
+    'shoulder' => 'Omuz',
+    'arm'      => 'Kol',
+    'leg'      => 'Bacak',
+    'core'     => 'Core',
+    'cardio'   => 'Kardiyo',
+    'other'    => 'Diğer',
+];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     $act = $_POST['action'] ?? '';
     if ($act === 'add') {
         $name = trim($_POST['name'] ?? '');
         if ($name !== '') {
+            // Çoklu kategori: sadece bilinen değerleri al, virgülle birleştir (MySQL SET)
+            $cats   = array_values(array_intersect((array)($_POST['category'] ?? []), array_keys($CATS)));
+            $catVal = $cats ? implode(',', $cats) : 'other';
             $st = $pdo->prepare('INSERT INTO exercises (name,category,session,is_optional,notes,sort_order)
                 VALUES (?,?,?,?,?,?)');
             $st->execute([
                 $name,
-                in_array($_POST['category']??'',['lower','upper','core','cardio','other'],true)?$_POST['category']:'other',
+                $catVal,
                 in_array($_POST['session']??'',['A','B','both','none'],true)?$_POST['session']:'none',
                 isset($_POST['is_optional'])?1:0,
                 trim($_POST['notes']??'') ?: null,
@@ -40,7 +56,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $rows = $pdo->query('SELECT * FROM exercises ORDER BY session, sort_order, name')->fetchAll();
-$catLbl=['lower'=>'Alt','upper'=>'Üst','core'=>'Core','cardio'=>'Kardiyo','other'=>'Diğer'];
 
 $title='Hareketler'; $nav='ex';
 require __DIR__ . '/header.php';
@@ -52,13 +67,13 @@ require __DIR__ . '/header.php';
     <input type="hidden" name="action" value="add">
     <label>İsim</label>
     <input name="name" placeholder="örn. Hip Thrust (makine)" required>
+    <label style="margin-top:12px">Kategori <span class="muted">(birden fazla seçebilirsin)</span></label>
+    <div class="checks">
+      <?php foreach ($CATS as $k => $lbl): ?>
+        <label class="chk"><input type="checkbox" name="category[]" value="<?= h($k) ?>"> <?= h($lbl) ?></label>
+      <?php endforeach; ?>
+    </div>
     <div class="row" style="margin-top:10px">
-      <div><label>Kategori</label>
-        <select name="category">
-          <option value="lower">Alt</option><option value="upper">Üst</option>
-          <option value="core">Core</option><option value="cardio">Kardiyo</option>
-          <option value="other">Diğer</option>
-        </select></div>
       <div><label>Seans</label>
         <select name="session">
           <option value="A">A</option><option value="B">B</option>
@@ -84,7 +99,7 @@ require __DIR__ . '/header.php';
         <?= h($e['name']) ?><?= $e['is_optional']?' <span class="pill opt">ops</span>':'' ?>
         <?php if ($e['notes']): ?><br><span class="ghosttxt" style="font-family:var(--sans)"><?= h($e['notes']) ?></span><?php endif; ?>
       </td>
-      <td class="muted"><?= h($catLbl[$e['category']]??$e['category']) ?></td>
+      <td><?php foreach (array_filter(explode(',', (string)$e['category'])) as $c): ?><span class="pill" style="margin:0 3px 3px 0"><?= h($CATS[$c] ?? $c) ?></span><?php endforeach; ?></td>
       <td><?php if(in_array($e['session'],['A','B'],true)): ?><span class="pill <?= h($e['session']) ?>"><?= h($e['session']) ?></span><?php else: ?><span class="muted"><?= $e['session']==='both'?'ortak':'–' ?></span><?php endif; ?></td>
       <td>
         <form method="post" style="display:inline">
