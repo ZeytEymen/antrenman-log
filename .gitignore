@@ -1,0 +1,10 @@
+# Gerçek veritabanı şifresi burada — git'e ASLA girmesin
+antrenman-log/config.php
+
+# Claude Code lokal ayarları
+.claude/
+
+# Sistem / editör dosyaları
+.DS_Store
+Thumbs.db
+*.log
